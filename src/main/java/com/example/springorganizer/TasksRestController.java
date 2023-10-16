@@ -6,9 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("api/tasks")
@@ -26,6 +24,11 @@ public class TasksRestController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(this.taskRepository.findAll());
+    }
+
+    @GetMapping("{id}")
+    public Optional<Task> handleFindTask(@PathVariable("id") UUID id){
+        return this.taskRepository.findById(id);
     }
 
     @PostMapping
