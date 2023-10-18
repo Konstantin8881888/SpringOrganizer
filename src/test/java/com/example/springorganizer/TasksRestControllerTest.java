@@ -29,11 +29,12 @@ class TasksRestControllerTest {
     TasksRestController controller;
     @Test
     void handleGetAllTasks_ReturnValidResponseEntity() {
-        var tasks = List.of(new Task(UUID.randomUUID(), "Первая задача", false),
-                new Task(UUID.randomUUID(), "Вторая задача", false));
-        doReturn(tasks).when(this.taskRepository).findAll();
+        var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
+        var tasks = List.of(new Task(UUID.randomUUID(), "Первая задача", false, user.id()),
+                new Task(UUID.randomUUID(), "Вторая задача", false, user.id()));
+        doReturn(tasks).when(this.taskRepository).findByApplicationUserId(user.id());
 
-        var responseEntity = this.controller.handleGetAllTasks();
+        var responseEntity = this.controller.handleGetAllTasks(user);
 
         assertNotNull(responseEntity);
         assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
@@ -43,9 +44,11 @@ class TasksRestControllerTest {
 
 @Test
 void handleFindTask_TaskExists_ReturnsValidResponseEntity() {
+//    var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
     // Создаем тестовые данные
+    var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
     UUID taskId = UUID.randomUUID();
-    Task task = new Task(taskId, "2 задача", false);
+    Task task = new Task(taskId, "2 задача", false, user.id());
 
     // Мокируем поведение taskRepository
     doReturn(Optional.of(task)).when(taskRepository).findById(taskId);
@@ -65,6 +68,7 @@ void handleFindTask_TaskExists_ReturnsValidResponseEntity() {
 
     @Test
     void handleFindTask_TaskNotFound_ReturnsNotFoundResponseEntity() {
+//        var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
         // Создаем тестовые данные
         UUID id = UUID.randomUUID();
 
@@ -87,8 +91,9 @@ void handleFindTask_TaskExists_ReturnsValidResponseEntity() {
     @Test
     void handleCreateNewTask_PayloadIsValid_ReturnsValidResponseEntity() {
         var details = "1 задача";
+        var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
 
-        var responseEntity = this.controller.handleCreateNewTask(new NewTaskPayload(details), UriComponentsBuilder.fromUriString("http://localhost:8080"), Locale.ENGLISH);
+        var responseEntity = this.controller.handleCreateNewTask(user, new NewTaskPayload(details), UriComponentsBuilder.fromUriString("http://localhost:8080"), Locale.ENGLISH);
 
         assertNotNull(responseEntity);
         assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
@@ -98,6 +103,7 @@ void handleFindTask_TaskExists_ReturnsValidResponseEntity() {
             assertEquals(details,task.details());
             assertFalse(task.completed());
             assertEquals(URI.create("http://localhost:8080/api/tasks/" + task.id()), responseEntity.getHeaders().getLocation());
+            assertEquals(user.id(), task.applicationUserId());
             verify(this.taskRepository).save(task);
         }
         else {
@@ -107,12 +113,13 @@ void handleFindTask_TaskExists_ReturnsValidResponseEntity() {
     }
     @Test
     void handleCreateNewTask_PayloadIsInvalid_ReturnsValidResponseEntity() {
+        var user = new ApplicationUser(UUID.randomUUID(),"user1", "password1");
         var details = "  ";
         var locale = Locale.US;
         var errorMessage = "Details is empty";
         doReturn(errorMessage).when(this.messageSource).getMessage("task.not.allowed", new Object[0], locale);
 
-        var responseEntity = this.controller.handleCreateNewTask(new NewTaskPayload(details), UriComponentsBuilder.fromUriString("http://localhost:8080"), locale);
+        var responseEntity = this.controller.handleCreateNewTask(user, new NewTaskPayload(details), UriComponentsBuilder.fromUriString("http://localhost:8080"), locale);
 
         assertNotNull(responseEntity);
         assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
